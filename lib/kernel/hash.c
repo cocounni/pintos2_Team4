@@ -21,10 +21,10 @@ static void rehash (struct hash *);
 
 /* Initializes hash table H to compute hash values using HASH and
    compare hash elements using LESS, given auxiliary data AUX. */
-bool
+bool							// bool hash_init: 해시 테이블을 초기화 해주는 함수
 hash_init (struct hash *h,
-		hash_hash_func *hash, hash_less_func *less, void *aux) {
-	h->elem_cnt = 0;
+		hash_hash_func *hash, hash_less_func *less, void *aux) {		// hash_hash_func: 해시값을 구해주는 함수의 포인터, hash_less_func: 해시 element들의 크기를 비교해주는 함수의 포인터 - hash_find()에서 사용
+	h->elem_cnt = 0;				// h: 초기화 할 Hash table
 	h->bucket_cnt = 4;
 	h->buckets = malloc (sizeof *h->buckets * h->bucket_cnt);
 	h->hash = hash;
@@ -77,8 +77,8 @@ hash_clear (struct hash *h, hash_action_func *destructor) {
    hash_insert(), hash_replace(), or hash_delete(), yields
    undefined behavior, whether done in DESTRUCTOR or
    elsewhere. */
-void
-hash_destroy (struct hash *h, hash_action_func *destructor) {
+void								// void hash_destroy: 해시 테이블을 삭제하는 함수
+hash_destroy (struct hash *h, hash_action_func *destructor) {				// hash_action_func: hash bucket의 entry를 삭제해주는 함수
 	if (destructor != NULL)
 		hash_clear (h, destructor);
 	free (h->buckets);
@@ -88,7 +88,7 @@ hash_destroy (struct hash *h, hash_action_func *destructor) {
    no equal element is already in the table.
    If an equal element is already in the table, returns it
    without inserting NEW. */
-struct hash_elem *
+struct hash_elem *						// 해시 테이블에 Element 삽입
 hash_insert (struct hash *h, struct hash_elem *new) {
 	struct list *bucket = find_bucket (h, new);
 	struct hash_elem *old = find_elem (h, bucket, new);
@@ -119,7 +119,7 @@ hash_replace (struct hash *h, struct hash_elem *new) {
 
 /* Finds and returns an element equal to E in hash table H, or a
    null pointer if no equal element exists in the table. */
-struct hash_elem *
+struct hash_elem *					// 해시 테이블에서 Element 검색 / 해시 테이블 원소 E에 해당하는 인덱스에 대응하는 bucket 내에서 E와 같은 해시 값을 가지는 원소를 리턴한다. 만약 없으면 NULL을 리턴
 hash_find (struct hash *h, struct hash_elem *e) {
 	return find_elem (h, find_bucket (h, e), e);
 }
@@ -131,7 +131,7 @@ hash_find (struct hash *h, struct hash_elem *e) {
    If the elements of the hash table are dynamically allocated,
    or own resources that are, then it is the caller's
    responsibility to deallocate them. */
-struct hash_elem *
+struct hash_elem *					// 해시 테이블에서 Element 제거
 hash_delete (struct hash *h, struct hash_elem *e) {
 	struct hash_elem *found = find_elem (h, find_bucket (h, e), e);
 	if (found != NULL) {
@@ -250,7 +250,7 @@ hash_bytes (const void *buf_, size_t size) {
 
 	hash = FNV_64_BASIS;
 	while (size-- > 0)
-		hash = (hash * FNV_64_PRIME) ^ *buf++;
+		hash = (hash * FNV_64_PRIME) ^ *buf++;			// ^ : XOR(exclusion OR). 같으면 0, 다르면 1
 
 	return hash;
 }
@@ -391,4 +391,3 @@ remove_elem (struct hash *h, struct hash_elem *e) {
 	h->elem_cnt--;
 	list_remove (&e->list_elem);
 }
-

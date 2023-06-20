@@ -718,7 +718,7 @@ void test_max_priority(void)
 	cur_elem = list_begin(&ready_list);
 	struct thread *thr = list_entry(cur_elem, struct thread, elem);
 
-	if (!list_empty(&ready_list))
+	if (!list_empty(&ready_list) && !intr_context())			// project3 시작하면서 && 이후 코드 추가 -> 5 fail에서 All pass!
 	{
 		if (thread_current()->priority < thr->priority)
 		{
