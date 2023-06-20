@@ -115,12 +115,19 @@ syscall_handler (struct intr_frame *f UNUSED) {
 }
 
 void check_address(void *addr){
-	if (addr == NULL)
-		exit(-1);
-	if (!is_user_vaddr(addr))
-		exit(-1);
-	if (pml4_get_page(thread_current()->pml4, addr) == NULL)
-		exit(-1);
+	/* project3 - Anonymous Page하면서 주석처리 함 */
+	// if (addr == NULL)
+	// 	exit(-1);
+	// if (!is_user_vaddr(addr))
+	// 	exit(-1);
+	// if (pml4_get_page(thread_current()->pml4, addr) == NULL)
+	// 	exit(-1);
+	/* 여기까지 주석처리 */
+	struct thread *cur = thread_current();				// project3 - Anonymous Page 하면서 추가 구현
+		if (addr == NULL || !(is_user_vaddr(addr))) {
+			exit(-1);
+		}
+
 	// if (addr == NULL || !(is_user_vaddr(addr))||pml4_get_page(cur->pml4, addr) == NULL){
 	// 	exit(-1);
 	// }

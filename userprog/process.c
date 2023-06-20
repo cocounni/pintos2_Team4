@@ -18,6 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#define VM
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -687,6 +688,35 @@ lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
+
+	/* project3 - Anonymous Page 추가 구현*/
+	// void *aux = lazy_load_info; (aux는 load segment에서 설정한 정보이다.)
+	// 이 정보를 사용하여 세그먼트 읽을 파일을 찾고 -> 세그먼트를 메모리로 읽어야 한다.
+
+	struct lazy_load_info * lazy_load_info = (struct lazy_load_info *)aux;
+	struct file * file = lazy_load_info->file;
+	size_t page_read_bytes = lazy_load_info->page_read_bytes;
+	size_t page_zero_bytes = lazy_load_info->page_zero_bytes;
+	off_t offset = lazy_load_info->offset;
+
+	file_seek(file, offset);
+
+	// vm_do_claim_page(page);
+	ASSERT (page->frame != NULL);			// 이 상황에서 page->frame이 제대로 설정되어 있는가?
+	void * kva = page->frame->kva;
+	if (file_read(file, kva, page_read_bytes) != (int)page_read_bytes)
+	{
+		//palloc_free_page(page);		// #ifdef DBG
+		free(lazy_load_info);
+		return false;
+	}
+
+	memset(kva + page_read_bytes, 0, page_zero_bytes);
+	free(lazy_load_info);
+
+	file_seek(file, offset);			// may read the file later - reset fileobj pos
+
+	return true;
 }
 
 /* Loads a segment starting at offset OFS in FILE at address

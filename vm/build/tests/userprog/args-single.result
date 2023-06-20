@@ -1,8 +1,8 @@
 FAIL
-Kernel panic in run: PANIC at ../../vm/vm.c:274 in supplemental_page_table_init(): assertion `initialize_hash != true' failed.
-Call stack: 0x8004217f3b 0x8004220e34 0x800421b599 0x80042074b0
+Kernel panic in run: PANIC at ../../vm/vm.c:297 in supplemental_page_table_init(): assertion `initialize_hash != true' failed.
+Call stack: 0x8004217f3b 0x800422102b 0x800421b599 0x80042074b0
 Translation of call stack:
 0x0000008004217f3b: debug_panic (lib/kernel/debug.c:32)
-0x0000008004220e34: supplemental_page_table_init (vm/vm.c:276)
-0x000000800421b599: initd (userprog/process.c:69)
+0x000000800422102b: supplemental_page_table_init (vm/vm.c:299)
+0x000000800421b599: initd (userprog/process.c:70)
 0x00000080042074b0: kernel_thread (threads/thread.c:437)

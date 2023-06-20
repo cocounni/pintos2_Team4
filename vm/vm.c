@@ -61,10 +61,28 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		/* 
 		TODO: Create the page, fetch the initialier according to the VM type,
 		TODO: and then create "uninit" page struct by calling uninit_new. You
-		TODO: should modify the field after calling the uninit_new.
+		TODO: should modify the field after calling the uninit_new. */
+		// project3 - Anonymous Page 추가
+		bool (*initializer)(struct page *, enum vm_type, void *);
+		switch(type){
+			case VM_ANON: case VM_ANON|VM_MARKER_0:
+				initializer = anon_initializer;
+				break;
+			case VM_FILE:
+				initializer = file_backed_initializer;
+				break;
+		}
 
-		TODO: Insert the page into the spt. 
-		*/
+		struct page *new_page = malloc(sizeof(struct page));
+		uninit_new (new_page, upage, init, type, aux, initializer);
+
+		new_page->writable = writable;
+		new_page->mapped_page_count = -1;			// only for file-mapped pages
+		
+		/*
+		TODO: Insert the page into the spt. */
+		spt_insert_page(spt, new_page);		// should always return true - checked that upage is not in stp
+			return true;
 	}
 err:
 	return false;
@@ -100,9 +118,14 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 	int succ = false;
 	/* 
 	TODO: Fill this function. */
-	
-	// return succ;
+	// project3 - Anonymous Page
+	struct hash_elem *e = hash_find(&spt->pages, &page->hash_elem);
+	if(e != NULL)		// page already in SPT
+		return succ;		// false, fail
+
+	// page not in SPT
 	return hash_insert(&spt->pages, page);
+	return succ = true;
 	// return hash_insert(&spt->spt_hash, &page->hash_elem) == NULL ? true : false;		// 존재하지 않을 경우에만 삽입
 }
 

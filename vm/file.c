@@ -22,10 +22,24 @@ vm_file_init (void) {
 /* Initialize the file backed page */
 bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
+	// project3 - Anonymous Page 추가 구현 (struct ~ , void *aux ~)
+	struct uninit_page *uninit = &page->uninit;
+	void *aux = uninit->aux;
+
 	/* Set up the handler */
 	page->operations = &file_ops;
+	memset(uninit, 0, sizeof(struct uninit_page));		// project3 - Anonymous Page
 
+	struct lazy_load_info *lazy_load_info = (struct lazy_load_info *)aux;			// project3 - Anonymous Page
 	struct file_page *file_page = &page->file;
+
+	/* project3 - Anonymous Page 추가 구현 */
+	file_page->file = lazy_load_info->file;
+	file_page->read_bytes = lazy_load_info->page_read_bytes;
+	file_page->ofs = lazy_load_info->offset;
+	file_page->zero_bytes = lazy_load_info->page_zero_bytes;
+	return true;
+	/****************** 끝 *****************/
 }
 
 /* Swap in the page by read contents from the file. */

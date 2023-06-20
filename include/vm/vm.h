@@ -1,5 +1,6 @@
 #ifndef VM_VM_H
 #define VM_VM_H
+#define EFILESYS
 #include <stdbool.h>
 #include "threads/palloc.h"
 #include "hash.h"
@@ -91,6 +92,14 @@ struct page_operations {
  * All designs up to you for this. */
 struct supplemental_page_table {
 	struct hash pages;
+};
+
+// project3 - Anonymous Page 추가 구현 (struct lazy_load_info)
+struct lazy_load_info {
+	struct file *file;
+	size_t page_read_bytes;
+	size_t page_zero_bytes;
+	off_t offset;
 };
 
 #include "threads/thread.h"
