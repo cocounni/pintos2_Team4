@@ -75,6 +75,7 @@ file_read (struct file *file, void *buffer, off_t size) {
 	file->pos += bytes_read;
 	return bytes_read;
 }
+typedef int32_t off_t;
 
 /* Reads SIZE bytes from FILE into BUFFER,
  * starting at offset FILE_OFS in the file.

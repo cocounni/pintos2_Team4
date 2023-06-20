@@ -70,7 +70,7 @@ initd (void *f_name) {
 	process_init ();
 
 	if (process_exec (f_name) < 0)
-		PANIC("Fail to launch initd\n");
+		PANIC("Fail to launch initd\n");				// project3 - Anonymous Page 터짐 수정 필요 
 	NOT_REACHED ();
 }
 
@@ -684,6 +684,16 @@ install_page (void *upage, void *kpage, bool writable) {
  * upper block. */
 
 static bool
+install_page(void *upage, void *kpage, bool writable)				// project3 - Anonymous Page 구현 시 추가 / load_segment를 위해
+{
+	struct thread *t = thread_current();
+
+	/* Verify that there's not already a page at that virtual
+	* address, then map our page there. */
+	return (pml4_get_page(t->pml4, upage) == NULL && pml4_set_page(t->pml4, upage, kpage, writable));
+}
+
+static bool
 lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
@@ -740,6 +750,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
 
+	file_seek(file, ofs);		// project3 - Anonymous Page 추가
 	while (read_bytes > 0 || zero_bytes > 0) {
 		/* Do calculate how to fill this page.
 		 * We will read PAGE_READ_BYTES bytes from FILE
@@ -748,10 +759,31 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		void *aux = NULL;
-		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-					writable, lazy_load_segment, aux))
+		// void *aux = NULL;
+		// if (!vm_alloc_page_with_initializer (VM_ANON, upage,
+		// 			writable, lazy_load_segment, aux))
+		// 	return false;
+
+		/* Get a page of memory. */
+		uint8_t *kpage = palloc_get_page(PAL_USER);
+		if (kpage == NULL)
 			return false;
+		
+		/* Load this page. */
+		if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes)
+		{
+			palloc_free_page(kpage);
+			return false;
+		}
+		memset(kpage + page_read_bytes, 0, page_zero_bytes);
+
+		/* Add the page to the process's address space. */
+		if (!install_page(upage, kpage, writable))
+		{
+			printf("fail\n");
+			palloc_free_page(kpage);
+			return false;
+		}
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
@@ -764,14 +796,25 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
 static bool
 setup_stack (struct intr_frame *if_) {
-	bool success = false;
-	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
+	// bool success = false;
+	// void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
 	/* TODO: Map the stack on stack_bottom and claim the page immediately.
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
+	uint8_t *kpage;
+	bool success = false;
 
+	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if (kpage != NULL)
+	{
+		success = install_page(((uint8_t *)USER_STACK) - PGSIZE, kpage, true);
+		if (success)
+			if_->rsp = USER_STACK;
+		else
+			palloc_free_page(kpage);
+	}
 	return success;
 }
 #endif /* VM */

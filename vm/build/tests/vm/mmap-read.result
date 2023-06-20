@@ -1,8 +1,15 @@
 FAIL
-Kernel panic in run: PANIC at ../../vm/vm.c:297 in supplemental_page_table_init(): assertion `initialize_hash != true' failed.
-Call stack: 0x8004217f3b 0x800422102b 0x800421b599 0x80042074b0
-Translation of call stack:
-0x0000008004217f3b: debug_panic (lib/kernel/debug.c:32)
-0x000000800422102b: supplemental_page_table_init (vm/vm.c:299)
-0x000000800421b599: initd (userprog/process.c:70)
-0x00000080042074b0: kernel_thread (threads/thread.c:437)
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (mmap-read) begin
+  (mmap-read) open "sample.txt"
+  (mmap-read) mmap "sample.txt"
+  (mmap-read) end
+Differences in `diff -u' format:
+  (mmap-read) begin
+  (mmap-read) open "sample.txt"
+  (mmap-read) mmap "sample.txt"
+- (mmap-read) end
+
+(Process exit codes are excluded for matching purposes.)

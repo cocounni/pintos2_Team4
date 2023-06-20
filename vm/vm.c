@@ -293,8 +293,8 @@ void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
 
 	// ✅ TEST: supplemental_page_table_init
-	bool initialize_hash = hash_init(&spt->pages, page_hash, page_less, NULL);
-	ASSERT(initialize_hash != true);	// initialize_hash가 true라면 프로그램을 종료시킨다.
+	// bool initialize_hash = hash_init(&spt->pages, page_hash, page_less, NULL);
+	// ASSERT(initialize_hash != true);	// initialize_hash가 true라면 프로그램을 종료시킨다.
 
 	hash_init(&spt->pages, page_hash, page_less, NULL);				// project3 - 추가
 

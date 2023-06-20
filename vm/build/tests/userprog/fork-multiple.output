@@ -4,8 +4,8 @@ Kernel command line: -q -f put fork-multiple run fork-multiple
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  117,760,000 loops/s.
-hd0:0: detected 321 sector (160 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+Calibrating timer...  157,081,600 loops/s.
+hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 104 sector (52 kB) disk, model "QEMU HARDDISK", serial "QM00003"
 hd1:1: detected 8,064 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00004"
@@ -13,16 +13,30 @@ Formatting file system...done.
 Boot complete.
 Putting 'fork-multiple' into the file system...
 Executing 'fork-multiple':
-Kernel PANIC at ../../vm/vm.c:297 in supplemental_page_table_init(): assertion `initialize_hash != true' failed.
-Call stack: 0x8004217f3b 0x800422102b 0x800421b599 0x80042074b0.
+(fork-multiple) begin
+child: exit(-2)
+(fork-multiple) Parent: child exit status is -1
+child: exit(-2)
+(fork-multiple) Parent: child exit status is -1
+child: exit(-2)
+Interrupt 0x0d (#GP General Protection Exception) at rip=800421c8c1
+ cr2=0000000000000000 error=               0
+rax cccccccccccccb5c rbx 000000800421a536 rcx 00000000004034f2 rdx 0000000000000020
+rsp 0000008004244e80 rbp 0000008004244eb0 rsi 0000000000000000 rdi 0000008004244150
+rip 000000800421c8c1 r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
+r11 0000000000000216 r12 000000800421d023 r13 0000008004244ef0 r14 000000800420a200
+r15 0000008004244ef0 rflags 00000296
+es: 001b ds: 001b cs: 0008 ss: 0010
+Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0x8004217f3b 0x800421cdf8 0x8004208fe7 0x8004209405 0x800421bb3e 0x800421d474 0x800421d0f6 0x800421cf4c 0x40013b 0x4001bf 0x400229 0x400cca 0.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 61 ticks
-Thread: 30 idle ticks, 31 kernel ticks, 0 user ticks
+Timer: 68 ticks
+Thread: 30 idle ticks, 30 kernel ticks, 8 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 34 reads, 236 writes
+hd0:1: 87 reads, 236 writes
 hd1:0: 104 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1207 characters output
+Console: 1972 characters output
 Key
