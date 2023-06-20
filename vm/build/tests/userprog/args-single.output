@@ -14,7 +14,7 @@ Boot complete.
 Putting 'args-single' into the file system...
 Executing 'args-single onearg':
 Kernel PANIC at ../../vm/vm.c:274 in supplemental_page_table_init(): assertion `initialize_hash != true' failed.
-Call stack: 0x8004217f3b 0x8004220caf 0x800421b599 0x80042074b0.
+Call stack: 0x8004217f3b 0x8004220e34 0x800421b599 0x80042074b0.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.

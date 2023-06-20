@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "threads/interrupt.h"
 #include "threads/synch.h" // 이것을 추가해야 포인터를 쓸 수 있습니다.
+#define VM
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -127,6 +128,7 @@ struct thread {
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
+	void *rsp;					// project3 추가
 #endif
 
 	/* Owned by thread.c. */
