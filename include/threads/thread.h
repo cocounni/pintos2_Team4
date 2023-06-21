@@ -123,13 +123,13 @@ struct thread {
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
-	// uint64_t *pml4;                     /* Page map level 4 */
+	uint64_t *pml4;                     /* Page map level 4 */
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
 	void *rsp;					// project3 추가
-	uint64_t *pml4;                     /* Page map level 4 */ // project3 _ supplemental_page_table_copy 구현 시 추가
+	// uint64_t *pml4;                     /* Page map level 4 */ // project3 _ supplemental_page_table_copy 구현 시 추가
 
 #endif
 

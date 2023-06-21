@@ -52,7 +52,7 @@ bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		vm_initializer *init, void *aux) {
 
-	ASSERT (VM_TYPE(type) != VM_UNINIT)
+	ASSERT (VM_TYPE(type) != VM_UNINIT);
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
@@ -64,8 +64,8 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		TODO: should modify the field after calling the uninit_new. */
 		// project3 - Anonymous Page 추가
 		bool (*initializer)(struct page *, enum vm_type, void *);
-		switch(type){
-			case VM_ANON: case VM_ANON|VM_MARKER_0:
+		switch(VM_TYPE(type)){
+			case VM_ANON:
 				initializer = anon_initializer;
 				break;
 			case VM_FILE:
@@ -77,10 +77,11 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		uninit_new (new_page, upage, init, type, aux, initializer);
 
 		new_page->writable = writable;
-		new_page->mapped_page_count = -1;			// only for file-mapped pages
+		// new_page->mapped_page_count = -1;			// only for file-mapped pages
 		
 		/*
 		TODO: Insert the page into the spt. */
+
 		spt_insert_page(spt, new_page);		// should always return true - checked that upage is not in stp
 			return true;
 	}
@@ -122,10 +123,9 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 	struct hash_elem *e = hash_find(&spt->pages, &page->hash_elem);				// hash_find 함수를 사용하여 'spt'에서 주어진 페이지 'page'의 'hash_elem'을 찾음 - 해당 페이지가 spt에 존재하는지 확인
 	if(e != NULL)		// page already in SPT									// hash_find 함수의 결과인 e가 NULL이 아니라면, 이미 페이지가 spt에 존재하므로 false를 반환하여 삽입 실패한 것을 알림
 		return succ;		// false, fail
-
 	// page not in SPT
 	return hash_insert(&spt->pages, page);										// page가 spt에 없는 경우, hash_insert 함수를 사용하여 spt에 page 삽입 - hash_insert 함수는 해시 테이블에 요소를 삽입하고, 성공하면 NULL 반환
-	return succ = true;															// hash_insert 함수가 해시 테이블에 요소 삽입을 성공하면 NULL 반환, 리턴값이 NULL이 아니라면 false 반환. 삽입 성공시 true 값 반환
+																// hash_insert 함수가 해시 테이블에 요소 삽입을 성공하면 NULL 반환, 리턴값이 NULL이 아니라면 false 반환. 삽입 성공시 true 값 반환
 	// return hash_insert(&spt->spt_hash, &page->hash_elem) == NULL ? true : false;		// 존재하지 않을 경우에만 삽입
 }
 
@@ -142,7 +142,7 @@ vm_get_victim (void) {
 	/* 
 	TODO: The policy for eviction is up to you. */
 	// project3 추가 구현
-	victim = list_entry(list_pop_front(&frame_table), struct frame, elem);		// FIFO algorithm
+	// victim = list_entry(list_pop_front(&frame_table), struct frame, elem);		// FIFO algorithm
 
 	return victim;
 }
@@ -174,7 +174,8 @@ vm_get_frame (void) {
 
 	//project3 추가
 	if (kva == NULL) {			// NULL이면 (사용 가능한 페이지가 없으면)
-		frame = vm_evict_frame();			// 페이지 삭제 후 frame 리턴
+		// frame = vm_evict_frame();			// 페이지 삭제 후 frame 리턴
+		PANIC("to do");
 	}
 	else {					// 사용 가능한 페이지가 있으면
 		frame = malloc(sizeof(struct frame));		// 페이지 사이즈만큼 메모리 할당
@@ -199,46 +200,32 @@ vm_handle_wp (struct page *page UNUSED) {
 /* Return true on success */
 bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
-	struct page *page = NULL;
-	/* 
-	TODO: Validate the fault */
-	/* 
-	TODO: Your code goes here */
+        bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
+    struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
+    struct page *page = NULL;
+    /* TODO: Validate the fault */
+    /* TODO: Your code goes here
+    TODO: 오류를 검증합니다. /
+    TODO: 여기에 코드를 추가하세요. */
+    if (addr == NULL)
+            return false;
 
-	// return vm_do_claim_page (page);
-	// project3 - Step 1. Locate the page that faulted in the supplemental page table
-	void * fpage_uvaddr = pg_round_down(addr);		// round down to nearest PGSIZE
+    if (is_kernel_vaddr(addr))
+        return false;
 
-	struct page *fpage = spt_find_page(spt, fpage_uvaddr);
+    if (not_present) // 접근한 메모리의 physical page가 존재하지 않은 경우
+    {
+        /* TODO: Validate the fault */
+        page = spt_find_page(spt, addr);
 
-	if(is_kernel_vaddr(addr)) {
-		return false;
-	}
-	else if (fpage == NULL) {
-		void *rsp = user ? f->rsp : thread_current()->rsp;			// a page fault occurs in the kernel
-		const int GROWTH_LIMIT = 32;		// heuristic
-		const int STACK_LIMIT = USER_STACK - (1<<20);				// 1MB size limit on stack
-
-		// Check stack size max limit and stack growth request heuristically
-		if ((uint64_t)addr > STACK_LIMIT && USER_STACK > (uint64_t)addr && (uint64_t)addr > (uint64_t)rsp - GROWTH_LIMIT) {
-			vm_stack_growth (fpage_uvaddr);
-			fpage = spt_find_page(spt, fpage_uvaddr);
-		}
-		else {
-			exit(-1);		// mmap-unmap
-		}
-	}
-	else if(write && !fpage->writable) {
-		exit(-1);		// mmap-ro
-	}
-	ASSERT(fpage != NULL);
-
-	// Step 2~4
-	bool gotFrame = vm_do_claim_page (fpage);
-
-	return gotFrame;
+        if (page == NULL)
+            return false;
+        if (write == 1 && page->writable == 0) // write 불가능한 페이지에 write 요청한 경우
+            return false;
+		// printf("21232232222222222222222");				// 218줄에서 page를 못 가져올수도 있고 바로 위 if문에서 - 자식의 spt hash에 page를 못 넣어준다.
+        return vm_do_claim_page(page);
+    }
+    return false;
 }
 
 /* Free the page.
@@ -309,40 +296,42 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 	// TODO: src의 각 페이지를 순회하고 dst에 해당 entry의 사본을 만듭니다.
 	// TODO: uninit page를 할당하고 그것을 즉시 claim해야 합니다.
 	struct hash_iterator i;
+
 	hash_first(&i, &src->pages);
 	while (hash_next(&i))
 	{
+		
 		// src_page 정보
 		struct page *src_page = hash_entry(hash_cur(&i), struct page, hash_elem);
-		enum vm_type type = src_page->operations->type;
+		enum vm_type type = src_page->operations->type;										// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		void *upage = src_page->va;
 		bool writable = src_page->writable;
-
 		/* 1) type이 uninit이면 */
 		if (type == VM_UNINIT)
 		{ // uninit page 생성 & 초기화
 			vm_initializer *init = src_page->uninit.init;
 			void *aux = src_page->uninit.aux;
 			vm_alloc_page_with_initializer(VM_ANON, upage, writable, init, aux);
+
 			continue;
 		}
 
 		/* 2) type이 file이면 */
-		if (type == VM_FILE)
-		{
-			struct lazy_load_info *file_aux = malloc(sizeof(struct lazy_load_info));
-			file_aux->file = src_page->file.file;
-			file_aux->offset = src_page->file.ofs;
-			file_aux->page_read_bytes = src_page->file.read_bytes;
-			file_aux->page_zero_bytes = src_page->file.zero_bytes;
-			if (!vm_alloc_page_with_initializer(type, upage, writable, NULL, file_aux))
-				return false;
-			struct page *file_page = spt_find_page(dst, upage);
-			file_backed_initializer(file_page, type, NULL);
-			file_page->frame = src_page->frame;
-			pml4_set_page(thread_current()->pml4, file_page->va, src_page->frame->kva, src_page->writable);
-			continue;
-		}
+		// if (type == VM_FILE)
+		// {
+		// 	struct lazy_load_info *file_aux = malloc(sizeof(struct lazy_load_info));
+		// 	file_aux->file = src_page->file.file;
+		// 	file_aux->offset = src_page->file.ofs;
+		// 	file_aux->page_read_bytes = src_page->file.read_bytes;
+		// 	file_aux->page_zero_bytes = src_page->file.zero_bytes;
+		// 	if (!vm_alloc_page_with_initializer(type, upage, writable, NULL, file_aux))
+		// 		return false;
+		// 	struct page *file_page = spt_find_page(dst, upage);
+		// 	file_backed_initializer(file_page, type, NULL);
+		// 	file_page->frame = src_page->frame;
+		// 	pml4_set_page(thread_current()->pml4, file_page->va, src_page->frame->kva, src_page->writable);
+		// 	continue;
+		// }
 
 		/* 3) type이 anon이면 */
 		if (!vm_alloc_page(type, upage, writable)) // uninit page 생성 & 초기화
@@ -361,11 +350,10 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 
 void hash_page_destroy(struct hash_elem *e, void *aux)
 {
-	struct page *page = hash_entry(e, struct page, hash_elem);
-	destroy(page);
-	free(page);
+    struct page *page = hash_entry(e, struct page, hash_elem);
+    destroy(page);
+    free(page);
 }
-
 
 /* Free the resource hold by the supplemental page table */
 void
@@ -373,8 +361,10 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/*
 	TODO: Destroy all the supplemental_page_table hold by thread and
 	TODO: writeback all the modified contents to the storage. */
+
 	hash_clear(&spt->pages, hash_page_destroy); // 해시 테이블에서 모든 요소를 제거
 }
+
 
 /********************* project3 - 추가 구현 *********************/
 // 해시 테이블 초기화할 때 해시 값을 구해주는 함수의 포인터 (page_hash)

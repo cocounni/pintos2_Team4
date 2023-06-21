@@ -205,13 +205,14 @@ __do_fork (void *aux) {
 		current->fdt[i] = file;
 	}
 	current->next_fd = parent->next_fd;
-
 	sema_up(&current->load_sema);
 	process_init ();
 
 	/* Finally, switch to the newly created process. */
+
 	if (succ)
 		do_iret (&if_);
+
 error:
 	sema_up(&current->load_sema);
 	exit(-2);
@@ -318,7 +319,6 @@ process_exit (void) {
 	}
 	palloc_free_multiple(curr->fdt, FDT_PAGES); /* 파일 테이블  */
 	file_close(curr->running); 					/* 현재 실행 중인 파일도 닫는다. */
-
 	process_cleanup ();
 
 	sema_up(&curr->wait_sema); 					/* 자식이 종료될 때까지 대기하고 있는 부모에게 signal을 보낸다. */
@@ -717,12 +717,12 @@ lazy_load_segment (struct page *page, void *aux) {
 	if (file_read(file, kva, page_read_bytes) != (int)page_read_bytes)
 	{
 		//palloc_free_page(page);		// #ifdef DBG
-		free(lazy_load_info);
+		// free(lazy_load_info);
 		return false;
 	}
 
 	memset(kva + page_read_bytes, 0, page_zero_bytes);
-	free(lazy_load_info);
+	// free(lazy_load_info);
 
 	file_seek(file, offset);			// may read the file later - reset fileobj pos
 
@@ -759,10 +759,16 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		// void *aux = NULL;
-		// if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-		// 			writable, lazy_load_segment, aux))
-		// 	return false;
+		//void *aux = NULL;
+		struct lazy_load_info *lazy_load_info = (struct lazy_load_info *)malloc(sizeof(struct lazy_load_info));
+		lazy_load_info->file = file;
+		lazy_load_info->offset = ofs;
+		lazy_load_info->page_read_bytes = page_read_bytes;
+		lazy_load_info->page_zero_bytes = page_zero_bytes;
+		// aux = lazy_load_info;
+		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
+					writable, lazy_load_segment, lazy_load_info))
+			return false;
 
 		/* Get a page of memory. */
 		uint8_t *kpage = palloc_get_page(PAL_USER);

@@ -124,9 +124,9 @@ void check_address(void *addr){
 	// 	exit(-1);
 	/* 여기까지 주석처리 */
 	struct thread *cur = thread_current();				// project3 - Anonymous Page 하면서 추가 구현
-		if (addr == NULL || !(is_user_vaddr(addr))) {
-			exit(-1);
-		}
+	if (addr == NULL || !(is_user_vaddr(addr))) {
+		exit(-1);
+	}
 
 	// if (addr == NULL || !(is_user_vaddr(addr))||pml4_get_page(cur->pml4, addr) == NULL){
 	// 	exit(-1);
@@ -166,12 +166,14 @@ int exec(const char *cmd_line)
 
 	char *cmd_line_copy;	// filename으로 const char* 복사본을 만든다. 
 	cmd_line_copy = palloc_get_page(0);
-	if (cmd_line_copy == NULL) // 메모리 할당 실패시 exit(-1)
+	if (cmd_line_copy == NULL) {// 메모리 할당 실패시 exit(-1)
 		exit(-1);
+	}
 	strlcpy(cmd_line_copy, cmd_line, PGSIZE); // cmd_line을 복사한다.
 
-	if (process_exec(cmd_line_copy) == -1)
+	if (process_exec(cmd_line_copy) == -1) {
 		exit(-1); // 실패 시 status -1로 종료한다.
+	}
 }
 
 int wait(int pid)
