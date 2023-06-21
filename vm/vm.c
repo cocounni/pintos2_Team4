@@ -96,36 +96,36 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {			
 	/* 
 	TODO: Fill this function. 
 	*/
-	struct page* page = (struct page*)malloc(sizeof(struct page));
+	struct page* page = (struct page*)malloc(sizeof(struct page));						// 'struct page'의 구조체인 'page'를 동적으로 할당. 이 구조체는 페이지 정보를 저장하는 용도로 사용
 	struct hash_elem *e;
 
 	// va에 해당하는 hash_elem 찾기
-	page->va = pg_round_down(va);	// page의 시작 주소 할당 / va가 가리키는 가상 페이지의 시작 포인트(오프셋이 0으로 설정된 va) 반환
+	page->va = pg_round_down(va);	// page의 시작 주소 할당 / va가 가리키는 가상 페이지의 시작 포인트(오프셋이 0으로 설정된 va) 반환: va의 가장 하위 비트를 버림 처리 함
 
 	/* e와 같은 해시값(va)을 가지는 원소를 e에 해당하는 bucket list 내에서
 	찾아 리턴한다. 만약 못 찾으면 NULL을 리턴한다. */
 	e = hash_find(&spt->pages, &page->hash_elem);
-	free(page);
+	free(page);														// 페이지를 찾은 후 동적으로 할당한 'page' 포인터 해제
 
 	// 있으면 e에 해당하는 페이지 반환
-	return e!=NULL ? hash_entry(e, struct page, hash_elem) : NULL;
+	return e!=NULL ? hash_entry(e, struct page, hash_elem) : NULL;				// 'hash_elem'을 가진 페이지 구조체를 찾아 반환
 }
 
 /* Insert PAGE into spt with validation. */
-bool
+bool																			// supplemental_page_table인 'spt'에 주어진 페이지 'page'를 삽입함 - 성공하면 True, 실패하면 False 반환
 spt_insert_page (struct supplemental_page_table *spt UNUSED,
 		struct page *page UNUSED) {
 	int succ = false;
 	/* 
 	TODO: Fill this function. */
 	// project3 - Anonymous Page
-	struct hash_elem *e = hash_find(&spt->pages, &page->hash_elem);
-	if(e != NULL)		// page already in SPT
+	struct hash_elem *e = hash_find(&spt->pages, &page->hash_elem);				// hash_find 함수를 사용하여 'spt'에서 주어진 페이지 'page'의 'hash_elem'을 찾음 - 해당 페이지가 spt에 존재하는지 확인
+	if(e != NULL)		// page already in SPT									// hash_find 함수의 결과인 e가 NULL이 아니라면, 이미 페이지가 spt에 존재하므로 false를 반환하여 삽입 실패한 것을 알림
 		return succ;		// false, fail
 
 	// page not in SPT
-	return hash_insert(&spt->pages, page);
-	return succ = true;
+	return hash_insert(&spt->pages, page);										// page가 spt에 없는 경우, hash_insert 함수를 사용하여 spt에 page 삽입 - hash_insert 함수는 해시 테이블에 요소를 삽입하고, 성공하면 NULL 반환
+	return succ = true;															// hash_insert 함수가 해시 테이블에 요소 삽입을 성공하면 NULL 반환, 리턴값이 NULL이 아니라면 false 반환. 삽입 성공시 true 값 반환
 	// return hash_insert(&spt->spt_hash, &page->hash_elem) == NULL ? true : false;		// 존재하지 않을 경우에만 삽입
 }
 
@@ -301,10 +301,71 @@ supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
 }
 
 /* Copy supplemental page table from src to dst */
+// project3 - Supplemental Page Table - Revisit : src에서 dst로 추가 페이지 테이블을 복사한다. 이것은 자식이 부모의 실행 컨텍스트를 상속해야 할 때 사용된다. 예) fork
 bool
 supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
-		struct supplemental_page_table *src UNUSED) {
+		struct supplemental_page_table *src UNUSED) {								// project3 - Supplemental Page Table 구현 추가 - struct supplemental_page_table_copy
+	// TODO: 보조 페이지 테이블을 src에서 dst로 복사합니다.
+	// TODO: src의 각 페이지를 순회하고 dst에 해당 entry의 사본을 만듭니다.
+	// TODO: uninit page를 할당하고 그것을 즉시 claim해야 합니다.
+	struct hash_iterator i;
+	hash_first(&i, &src->pages);
+	while (hash_next(&i))
+	{
+		// src_page 정보
+		struct page *src_page = hash_entry(hash_cur(&i), struct page, hash_elem);
+		enum vm_type type = src_page->operations->type;
+		void *upage = src_page->va;
+		bool writable = src_page->writable;
+
+		/* 1) type이 uninit이면 */
+		if (type == VM_UNINIT)
+		{ // uninit page 생성 & 초기화
+			vm_initializer *init = src_page->uninit.init;
+			void *aux = src_page->uninit.aux;
+			vm_alloc_page_with_initializer(VM_ANON, upage, writable, init, aux);
+			continue;
+		}
+
+		/* 2) type이 file이면 */
+		if (type == VM_FILE)
+		{
+			struct lazy_load_info *file_aux = malloc(sizeof(struct lazy_load_info));
+			file_aux->file = src_page->file.file;
+			file_aux->offset = src_page->file.ofs;
+			file_aux->page_read_bytes = src_page->file.read_bytes;
+			file_aux->page_zero_bytes = src_page->file.zero_bytes;
+			if (!vm_alloc_page_with_initializer(type, upage, writable, NULL, file_aux))
+				return false;
+			struct page *file_page = spt_find_page(dst, upage);
+			file_backed_initializer(file_page, type, NULL);
+			file_page->frame = src_page->frame;
+			pml4_set_page(thread_current()->pml4, file_page->va, src_page->frame->kva, src_page->writable);
+			continue;
+		}
+
+		/* 3) type이 anon이면 */
+		if (!vm_alloc_page(type, upage, writable)) // uninit page 생성 & 초기화
+			return false;						   // init이랑 aux는 Lazy Loading에 필요. 지금 만드는 페이지는 기다리지 않고 바로 내용을 넣어줄 것이므로 필요 없음
+
+		// vm_claim_page으로 요청해서 매핑 & 페이지 타입에 맞게 초기화
+		if (!vm_claim_page(upage))
+			return false;
+
+		// 매핑된 프레임에 내용 로딩
+		struct page *dst_page = spt_find_page(dst, upage);
+		memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+	}
+	return true;
 }
+
+void hash_page_destroy(struct hash_elem *e, void *aux)
+{
+	struct page *page = hash_entry(e, struct page, hash_elem);
+	destroy(page);
+	free(page);
+}
+
 
 /* Free the resource hold by the supplemental page table */
 void
@@ -312,6 +373,7 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/*
 	TODO: Destroy all the supplemental_page_table hold by thread and
 	TODO: writeback all the modified contents to the storage. */
+	hash_clear(&spt->pages, hash_page_destroy); // 해시 테이블에서 모든 요소를 제거
 }
 
 /********************* project3 - 추가 구현 *********************/

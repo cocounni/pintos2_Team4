@@ -164,6 +164,7 @@ hash_apply (struct hash *h, hash_action_func *action) {
 	}
 }
 
+
 /* Initializes I for iterating hash table H.
 
    Iteration idiom:

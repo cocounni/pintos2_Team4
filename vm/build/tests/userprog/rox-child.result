@@ -1,2 +1,2 @@
 FAIL
-run: fork() returned -1: FAILED
+run: wait for child: FAILED
