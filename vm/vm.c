@@ -273,29 +273,39 @@ supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
 /* Copy supplemental page table from src to dst 
 src에서 dst로 보조 페이지 테이블을 복사합니다.*/
 bool
-supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
+supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) 
+{
+	// TODO: 보조 페이지 테이블을 src에서 dst로 복사합니다.
+	// TODO: src의 각 페이지를 순회하고 dst에 해당 entry의 사본을 만듭니다.
+	// TODO: uninit page를 할당하고 그것을 즉시 claim해야 합니다.
 	struct hash_iterator i;
 
 	hash_first (&i, &src->spt_hash);
 	while (hash_next (&i))
-	{	
+	{
+		// src_page 정보
 		struct page *src_page = hash_entry (hash_cur (&i), struct page, hash_elem);
 		//...f를 사용하여 작업 수행...
 		enum vm_type type = src_page->operations->type;
 		void *upage = src_page->va;
 		bool writable = src_page->writable;
-		if (type == VM_UNINIT){
+
+		/* 1) type이 uninit이면 */
+		if (type == VM_UNINIT)
+		{	// uninit page 생성 & 초기화
 			vm_initializer *init = src_page -> uninit.init;
 			void *aux =src_page ->uninit.aux;
-			vm_alloc_page_with_initializer(VM_ANON,upage,writable,init,aux);
+			vm_alloc_page_with_initializer(VM_ANON, upage, writable, init, aux);
 			continue;
 		}
+		
+		/* 2) type이 uninit이 아니면 */
 		if (!vm_alloc_page(type, upage, writable))
 			return false;
 		if (!vm_claim_page(upage))
 			return false;
-		struct page *dst_page =spt_find_page(dst,upage);
-		memcpy(dst_page -> frame -> kva, src_page->frame->kva, PGSIZE);
+		struct page *dst_page = spt_find_page(dst,upage);
+		memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
 	}
 	return true;
 
@@ -317,16 +327,28 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage.
 	 TODO: 스레드가 보유한 모든 보조 페이지 테이블을 제거하고
-     TODO: 수정된 모든 내용을 스토리지에 기록하세요.  */
-	 hash_clear(&spt->spt_hash, hash_page_destroy);
-}
+     TODO: 수정된 모든 내용을 스토리지에 기록하세요.
+	 TODO: 페이지 항목들을 순회하며 테이블 내의 페이지들에 대해 destroy(page)를 호출  */
+	 hash_clear(&spt->spt_hash, hash_page_destroy);				// 해시 테이블의 모든 요소를 제거
 
-unsigned page_hash(const struct hash_elem *p_, void *aux UNUSED){
+	 //!!!!!!!!!!!! hash_destroy가 아닌 hash_clear를 사용해야 하는 이유
+	  /* 여기서 hash_destroy 함수를 사용하면 hash가 사용하던 메모리(hash->bucket) 자체도 반환한다.
+	  * process가 실행될 때 hash table을 생성한 이후에 process_clean()이 호출되는데,
+	  * 이때는 hash table은 남겨두고 안의 요소들만 제거되어야 한다.
+	  * 따라서, hash의 요소들만 제거하는 hash_clear를 사용해야 한다.
+	 */
+}
+// 해시 테이블을 초기화할 때 해시 값을 구해주는 함수의 포인터(page_hash)
+unsigned
+page_hash(const struct hash_elem *p_, void *aux UNUSED){
 	const struct page *p =hash_entry(p_, struct page, hash_elem);
 	return hash_bytes(&p->va,sizeof p->va);
 }
 
-unsigned page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux UNUSED){
+// 해시 테이블을 초기화할 때 해시 요소를 비교하는 함수의 포인터(page_less)
+// a가 b보다 작으면 true, 반대면 false
+unsigned
+page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux UNUSED){
 	const struct page *a = hash_entry(a_, struct page, hash_elem); // hash_elem 구조체의 a_포인터를 page구조체의 포인터로 바꾸고 해시 요소의 멤버로 hash_elem을 집어넣겠다
 	const struct page *b = hash_entry(b_, struct page, hash_elem);
 	return a->va < b->va;
