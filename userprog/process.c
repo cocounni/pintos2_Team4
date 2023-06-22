@@ -18,6 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "userprog/syscall.h"
 #define VM
 #ifdef VM
 #include "vm/vm.h"
@@ -120,7 +121,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED)
 		// 이거 넣으면 간헐적으로 실패함 (syn-read)
 		// list_remove(&child->child_elem);
 		// 자식이 완전히 종료되고 스케줄링이 이어질 수 있도록 자식에게 signal을 보낸다.
-		sema_up(&child->exit_sema);
+		// sema_up(&child->exit_sema);
 		// 자식 프로세스의 pid가 아닌 TID_ERROR를 반환한다.
 		return TID_ERROR;
 	}
@@ -248,7 +249,9 @@ __do_fork (void *aux) {
 	}
 	current->next_fd = parent->next_fd;
 
+	lock_acquire(&filesys_lock);			// project3 - Stack Growth : lock_acquire 추가
 	sema_up(&current->load_sema);
+	lock_release(&filesys_lock);			// project3 - Stack Growth : lock_release 추가
 	process_init ();
 
 	/* Finally, switch to the newly created process.마지막으로 새로 생성된 프로세스로 전환합니다. */
