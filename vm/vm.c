@@ -50,11 +50,11 @@ page, do not create it directly and make it through this function or
 초기화 함수를 사용하여 보류 중인 페이지 개체를 생성합니다. 페이지를 생성하려면
 직접 생성하지 말고 이 함수나 'vm_alloc_page'를 통해 만드세요. */
 bool
-vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,vm_initializer *init, void *aux) {
-
+vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,vm_initializer *init, void *aux) {		// type: 가상 메모리의 유형, upage: 할당할 페이지의 user 가상 주소, writable: 페이지 읽기/쓰기 가능 여부,
+																														// init: 페이지 초기화 함수에 대한 포인터, aux: 보조 데이터 포인터
 	ASSERT (VM_TYPE(type) != VM_UNINIT)
 
-	struct supplemental_page_table *spt = &thread_current ()->spt;
+	struct supplemental_page_table *spt = &thread_current ()->spt;														// 현재 스레드와 연결된 spt(보충 페이지 테이블) 가져옴
 
 	/* Check wheter the upage is already occupied or not. 
 	upage가 이미 점유되었는지 확인합니다*/
@@ -68,7 +68,7 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,vm
 		int t = VM_TYPE(type);
 		struct page *p=(struct page*)malloc(sizeof(struct page)); 
 		bool (*initializer)(struct page *, enum vm_type, void *);
-		switch (t){
+		switch (t){																	// type에 따라 적절한 초기화 함수 가져옴
 		case VM_ANON:
 			initializer = anon_initializer;
 			break;
@@ -76,14 +76,14 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,vm
 			initializer = file_backed_initializer;
 			break;
 		}
-		uninit_new(p, upage, init, type, aux, initializer);
+		uninit_new(p, upage, init, type, aux, initializer);							// uninit_new 함수롤 호출하여 새로 생성된 struct page, upage, init, type, aux, initializer를 전달함 / 제공된 초기화 함수로 페이지를 초기화 하는 역할
 		p->writable =writable;
 		//!
 		/* TODO: Insert the page into the spt.TODO: 페이지를 spt에 삽입합니다. */
-		return spt_insert_page(spt, p);
+		return spt_insert_page(spt, p);												// spt_insert_page 함수롤 호출하여 페이지를 보충 페이지 테이블에 삽입
 	}
 err:
-	return false;
+	return false;					// 페이지 삽입 성공하면 true, 페이지 할당이나 삽입 과정 중에 오류가 발생하면 err 레이블로 이동하여 false 반환
 }
 
 /* Find VA from spt and return page. On error, return NULL.
@@ -290,7 +290,7 @@ supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
 src에서 dst로 보조 페이지 테이블을 복사합니다.*/
 bool
 supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) 
-{
+{																		// dst는 복사될 보조 페이지 테이블 / src는 복사할 보조 페이지 테이블 : src -> dst로 복사
 	// TODO: 보조 페이지 테이블을 src에서 dst로 복사합니다.
 	// TODO: src의 각 페이지를 순회하고 dst에 해당 entry의 사본을 만듭니다.
 	// TODO: uninit page를 할당하고 그것을 즉시 claim해야 합니다.
@@ -302,12 +302,12 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED, struct
 		// src_page 정보
 		struct page *src_page = hash_entry (hash_cur (&i), struct page, hash_elem);
 		//...f를 사용하여 작업 수행...
-		enum vm_type type = src_page->operations->type;
-		void *upage = src_page->va;
-		bool writable = src_page->writable;
+		enum vm_type type = src_page->operations->type;					// type: 페이지의 가상 메모리 타입
+		void *upage = src_page->va;										// upage: 페이지의 가상 주소
+		bool writable = src_page->writable;								// writable: 페이지의 쓰기 가능 여부
 
 		/* 1) type이 uninit이면 */
-		if (type == VM_UNINIT)
+		if (type == VM_UNINIT)											// 페이지 타입이 VM_UNINIT이면 초기화되지 않은 페이지를 할당하고 초기화한다.
 		{	// uninit page 생성 & 초기화
 			vm_initializer *init = src_page -> uninit.init;
 			void *aux =src_page ->uninit.aux;
@@ -316,14 +316,14 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED, struct
 		}
 		
 		/* 2) type이 uninit이 아니면 */
-		if (!vm_alloc_page(type, upage, writable))
+		if (!vm_alloc_page(type, upage, writable))						// 타입이 VM_UNINIT이 아니면 타입에 맞게 페이지를 할당한 후 페이지를 요구함
 			return false;
 		if (!vm_claim_page(upage))
 			return false;
 		struct page *dst_page = spt_find_page(dst,upage);
-		memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+		memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);		// 페이지를 요구한 후 src_page의 데이터를 dst_page로 복사함 이때 memcpy를 이용하여 페이지의 프레임(KVA)을 복사함0
 	}
-	return true;
+	return true;														// 모든 페이지 복사한 후 true 반환
 
 }
 
@@ -339,7 +339,7 @@ void hash_page_destroy(struct hash_elem *e, void *aux)
 
 
 void
-supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
+supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {				// struct supplemental_page_table 포인터인 spt를 매개변수로 받음. -> spt: 파괴할 보조 페이지 테이블을 나타냄
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage.
 	 TODO: 스레드가 보유한 모든 보조 페이지 테이블을 제거하고
@@ -348,7 +348,7 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	 hash_clear(&spt->spt_hash, hash_page_destroy);				// 해시 테이블의 모든 요소를 제거
 
 	 //!!!!!!!!!!!! hash_destroy가 아닌 hash_clear를 사용해야 하는 이유
-	  /* 여기서 hash_destroy 함수를 사용하면 hash가 사용하던 메모리(hash->bucket) 자체도 반환한다.
+	  /* 여기서 hash_destroy 함수를 사용하면 해시 테이블 자체가 소멸되어 hash가 사용하던 메모리(hash->bucket) 자체도 반환한다.
 	  * process가 실행될 때 hash table을 생성한 이후에 process_clean()이 호출되는데,
 	  * 이때는 hash table은 남겨두고 안의 요소들만 제거되어야 한다.
 	  * 따라서, hash의 요소들만 제거하는 hash_clear를 사용해야 한다.

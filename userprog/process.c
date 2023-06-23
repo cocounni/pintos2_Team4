@@ -814,14 +814,14 @@ install_page (void *upage, void *kpage, bool writable) {
 	*/
 
 static bool
-lazy_load_segment (struct page *page, void *aux) {
+lazy_load_segment (struct page *page, void *aux) {				// page는 로드할 페이지, aux는 추가 정보를 전달하기 위한 매개변수
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. 
 	TODO: 파일에서 세그먼트를 로드합니다. /
 	TODO: 이 함수는 VA 주소에서 첫 번째 페이지 폴트가 발생할 때 호출됩니다. /
 	TODO: 호출 시 사용 가능한 VA가 제공됩니다. */
-	struct for_lazy *for_lazy=(struct for_lazy*) aux;
+	struct for_lazy *for_lazy=(struct for_lazy*) aux;					// 주어진 aux를 struct for_lazy 포인터로 형변환하여 사용
 	file_seek(for_lazy->file, for_lazy->ofs);
 	if(file_read (for_lazy->file, page->frame->kva, for_lazy->read_bytes) != (int)(for_lazy->read_bytes))
 	{
@@ -829,7 +829,7 @@ lazy_load_segment (struct page *page, void *aux) {
 		return false;
 	}
 	memset(page->frame->kva + for_lazy->read_bytes, 0, for_lazy->zero_bytes);
-	free(for_lazy);
+	// free(for_lazy);									//!!!!!!!!!!!!!!!!!!!!!!!!!!! project3 - Stack Growth 구현 시 여기 한 줄 주석처리 하니까 fork read() PASS
 	return true;
 }
 
@@ -862,9 +862,9 @@ UPAGE + READ_BYTES에서 시작하는 ZERO_BYTES 바이트는 0으로 설정되�
 static bool
 load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
-	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
-	ASSERT (pg_ofs (upage) == 0);
-	ASSERT (ofs % PGSIZE == 0);
+	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);		// 읽어야 하는 바이트(read_bytes)와 초기화해야 하는 바이트(zero_bytes)의 합이 페이지 크기의 배수인지 확인
+	ASSERT (pg_ofs (upage) == 0);				// upage가 페이지 내의 오프셋 0인지 확인
+	ASSERT (ofs % PGSIZE == 0);					// ofs가 페이지 크기의 배수인지 확인
 
 	while (read_bytes > 0 || zero_bytes > 0) {
 		/* Do calculate how to fill this page.
@@ -886,7 +886,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		for_lazy->read_bytes =page_read_bytes;
 		for_lazy->zero_bytes =page_zero_bytes;
 		void *aux = NULL;
-		if (!vm_alloc_page_with_initializer (VM_ANON, upage, writable, lazy_load_segment, for_lazy))
+		if (!vm_alloc_page_with_initializer (VM_ANON, upage, writable, lazy_load_segment, for_lazy))			// vm_alloc_page_with_initializer 함수 호출에 실패하면 return false 후 함수 종료
 			return false;
 
 		/* Advance. */

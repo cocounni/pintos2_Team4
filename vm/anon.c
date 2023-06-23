@@ -47,6 +47,6 @@ anon_swap_out (struct page *page) {
 
 /* Destroy the anonymous page. PAGE will be freed by the caller. */
 static void
-anon_destroy (struct page *page) {
-	struct anon_page *anon_page = &page->anon;
+anon_destroy (struct page *page) {												// 매개변수로 받는 page: 파괴할 페이지를 나타냄
+	struct anon_page *anon_page = &page->anon;									// page의 anon 필드를 가리키도록 설정. anon필드에 대한 참조를 얻음
 }
