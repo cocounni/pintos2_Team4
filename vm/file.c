@@ -46,6 +46,7 @@ file_backed_swap_in (struct page *page, void *kva) {
 	// return for_lazy(page, file_page);		//! 최종 수정시 주석처리
 
 	return lazy_load_segment(page, file_page);	//! 최종 수정시 추가
+}
 
 /* Swap out the page by writeback contents to the file. */
 static bool
