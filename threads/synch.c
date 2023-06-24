@@ -360,3 +360,48 @@ cmp_sem_priority(const struct list_elem *a, const struct list_elem *b, void *aux
 
    return (first->priority > second->priority);
 }
+
+//! 아래 코드들은 마지막에 추가 
+
+// donation_elem의 priority를 기준으로 정렬하는 함수
+bool cmp_donation_priority(const struct list_elem *a,
+						   const struct list_elem *b, void *aux UNUSED)
+{
+	struct thread *st_a = list_entry(a, struct thread, donation_elem);
+	struct thread *st_b = list_entry(b, struct thread, donation_elem);
+	return st_a->priority > st_b->priority;
+}
+
+// donors list를 돌면서 현재 release될 락을 기다리고 있던 donors를 삭제
+void remove_donor(struct lock *lock)
+{
+	struct list *donations = &(thread_current()->donations); // 현재 스레드의 donations
+	struct list_elem *donor_elem;							 // 현재 스레드의 donations의 요소
+	struct thread *donor_thread;
+	if (list_empty(donations))
+		return;
+	donor_elem = list_front(donations);
+	while (1)
+	{
+		donor_thread = list_entry(donor_elem, struct thread, donation_elem);
+		donor_elem = list_next(donor_elem);
+		if (donor_thread->wait_on_lock == lock)		   // 현재 release될 lock을 기다리던 스레드라면
+			list_remove(&donor_thread->donation_elem); // 목록에서 제거
+		if (donor_elem == list_end(donations))
+			return;
+	}
+}
+// 락을 release하고 나서 priority를 상속 받기 이전 상태로 돌리는 함수
+void update_priority_for_donations(void)
+{
+	struct thread *curr = thread_current();
+	struct list *donations = &(thread_current()->donations);
+	struct thread *donations_root;
+	if (list_empty(donations)) // donors가 없으면 (donor가 하나였던 경우)
+	{
+		curr->priority = curr->init_priority; // 최초의 priority로 변경
+		return;
+	}
+	donations_root = list_entry(list_front(donations), struct thread, donation_elem);
+	curr->priority = donations_root->priority;
+}

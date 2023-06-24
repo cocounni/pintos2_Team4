@@ -58,6 +58,8 @@ struct page {
 	//! 3
 	struct hash_elem hash_elem;
 	bool writable;
+	int mapped_page_count;					//! MEMORY MAPPED FILES 수정
+											// mapped_page_count : file_backed_page인 경우, 매핑에 사용한 페이지 개수(매핑 해제 시 사용)
 	/* Per-type data are binded into the union.
 	 Each function automatically detects the current union 
 	유형별 데이터가 결합됩니다.
@@ -77,9 +79,15 @@ struct page {
 struct frame {
 	void *kva;
 	struct page *page;
-	struct list_elem frame_elem;
+	struct list_elem frame_elem;				// frame_table을 위한 list_elem
 };
 
+struct slot
+{
+	struct page *page;
+	uint32_t slot_no;
+	struct list_elem swap_elem;
+};
 /* The function table for page operations.
 This is one way of implementing "interface" in C.
 Put the table of "method" into the struct's member, and
@@ -140,4 +148,10 @@ enum vm_type page_get_type (struct page *page);
 unsigned page_hash(const struct hash_elem *p_, void *aux UNUSED);
 unsigned page_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux UNUSED);
 void hash_page_destroy(struct hash_elem *e, void *aux);
+
+struct list swap_table;
+struct list frame_table;
+struct lock swap_table_lock;
+struct lock frame_table_lock;
+
 #endif  /* VM_VM_H */
